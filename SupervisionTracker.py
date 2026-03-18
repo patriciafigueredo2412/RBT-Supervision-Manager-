@@ -4,10 +4,11 @@ from itertools import count
 from pickle import TRUE
 from re import S
 import tkinter as tk 
-from tkinter import ttk
+from tkinter import CENTER, SEL, ttk
 from dataclasses import dataclass
 import sqlite3
 from tkinter.tix import PopupMenu
+from tkinter import filedialog
 
 
 #My GIU CLASS 
@@ -30,11 +31,12 @@ class MyGUI :
             self.notebook.add(self.tab1, text= "Manage")    
             self.notebook.add(self.tab2, text = "Records")
             self.notebook.pack(expand=True, fill="both")
-
-           #------------------------------------------------TAB # 1- SCHEDULE------------------------------------------------------------------------------------
+           #-------------------------------------------------------------------------------------------------------------------------------------
+           #------------------------------------------------TAB # 1- SCHEDULE-------------------------------------------------------------------
+           #----------------------------------------------------------------------------------------------------------------------------------------
             #Lets start working on the first tab , which is the manage tab , here i will add a label and a button that when clicked will call a function
             self.titleT1=tk.Label(self.tab1, text="Welcome to the Supervision Tracker", font=("Arial", 16) )
-            self.titleT1.pack(pady=10)
+            self.titleT1.grid(row=0, column=0 , columnspan=4 , pady=10)
 
             '''
             1-Create the GUI 
@@ -42,12 +44,89 @@ class MyGUI :
             Create a button that says "Add RBT" when you click on it it opens a new window where you can add the name of the RBT, the client, the start date and the end date, and then when you click on submit it saves that information to the database and shows it in the records tab
             Create a button that deletes a record, when you click on it it opens a new window where you can enter the name of the RBT that you want to delete, and then when you click on submit it deletes that record from the database and updates the records tab
             Create two entry boxes , one to put the total hours , and one to put the amount of the month so far 
-
             2-Create the database
             3-Create the functions for the buttons and the dropdown box
             4-Create the email connection 
-            
+           
             '''
+            #Grid layout Tab 1 
+            self.tab1.rowconfigure(0, weight=1)
+            self.tab1.rowconfigure(1, weight=1)
+            self.tab1.rowconfigure(2, weight=1)
+            self.tab1.rowconfigure(3, weight=1)
+            self.tab1.columnconfigure(0, weight=1)
+            self.tab1.columnconfigure(1, weight=1)
+            self.tab1.columnconfigure(2, weight=1)
+            self.tab1.columnconfigure(3, weight=1)
+            #----BUTTONS AND LABELS FOR TAB 1------------------------------------------------------------------------------------
+
+            #Label  
+            self.labelt1= tk.Label(self.tab1, text="Select an RBT to see their schedule", font=("Arial", 12) )
+            self.labelt1.grid(row=1, column=0 , columnspan=4 , pady=10)
+
+            #Dropped Down box
+            self.clicked = tk.StringVar()
+            rbt_list=self.db.get_names()   #get the names of the RBTs from the database)
+            self.drop = ttk.Combobox(self.tab1, textvariable=self.clicked )
+            self.drop['values'] = rbt_list
+            self.clicked.set("Select an RBT") 
+            self.drop.grid(row=2, column=0 , columnspan=4 ,sticky= "ew",  pady=10)
+
+            #Entry box for total hours
+            self.entry_hours= tk.Entry(self.tab1 , text = "Enter the ammount of hours ")
+            self.entry_hours.grid(row=3 , column=0 )
+
+            #Button to add hours
+            self.addhours= tk.Button(self.tab1, text="Add Hours", command = self.add_hours )
+            self.addhours.grid(row=3, column=1 , pady=10)
+
+            #refresh month button (TEMPORAL)
+            self.reset=tk.Button(self.tab1, text="Reset Hours ", command=self.refresh_month)
+            self.reset.grid(row=3, column=2 , pady=10)
+
+            #Display Status 
+            self.status= tk.StringVar()
+            self.status.set("Not Met")
+            self.statusLabel= tk.Label(self.tab1, text =self.status.get() , font=("Arial", 12) )
+            self.statusLabel.grid(row=3, column=3 , pady=10)
+
+            #Add Button : popup to select add manual or upload file 
+            self.addrbt= tk.Button(self.tab1, text="Add RBT", command = self.add_schedule)
+            self.addrbt.grid(row=4, column=0 , pady=10)
+
+            #Edit button 
+            self.edit= tk.Button(self.tab1, text="Edit Schedule", command = self.edit_schedule )
+            self.edit.grid(row=4, column=1 , pady=10)
+
+            #Delete button 
+            self.deleteT1= tk.Button(self.tab1, text="Delete RBT", command = self.delete_schedule )
+            self.deleteT1.grid(row=4, column=2 , pady=10)
+
+            #--------------------------------------------Table for tab 1------------------------------------------------------------------------------------
+            #Table to show the schedule of the RBTs
+            self.scheduleTable=ttk.Treeview(self.tab1)
+            self.scheduleTable.grid(column = 0 , row= 5 , columnspan=4 , sticky = 'nsew')
+            self.scheduleTable['columns'] = ("RBT", "Hours", "Status")
+            self.scheduleTable.column("#0", width=0, stretch=tk.NO)   #phantom column
+            self.scheduleTable.column("RBT", anchor=tk.W, width=120)
+            self.scheduleTable.column("Hours", anchor=tk.CENTER, width=100)
+            self.scheduleTable.column("Status", anchor=tk.CENTER, width=100)
+            self.scheduleTable.heading("#0" , text = "Label" , anchor= tk.W)
+            self.scheduleTable.heading("RBT", text= "RBT Name" , anchor= tk.W )
+            self.scheduleTable.heading("Hours", text= "Hours" , anchor= tk.W )
+            self.scheduleTable.heading("Status" , text="Status")
+
+            #insert  data to the schedule table
+            all_schedules= self.db.get_all_schedules()   #get all the data from the database
+            for row in all_schedules:
+                self.scheduleTable.insert(parent='', index='end', values=row)
+            
+
+
+
+
+            
+
             #------------------------------------------------------------------------------------------------------------------------------------------
             #-----------------------------------------------TAB # 2 - RECORDS------------------------------------------------------------------------------------
             #------------------------------------------------------------------------------------------------------------------------------------------
@@ -99,7 +178,7 @@ class MyGUI :
            #-----TABLE FOR TAB 2------------------------------------------------------------------------------------
        
             self.table= ttk.Treeview(self.tab2)
-            self.table.grid(column = 3 , row= 1 ,sticky = 'nsew')
+            self.table.grid(column = 3 , row= 1 ,columnspan = 3 , sticky = 'nsew')
 
             #define the columns of the table
             self.table['columns'] = ("Name", "Client", "Start Date" , "End Date")
@@ -122,7 +201,134 @@ class MyGUI :
                 self.table.insert(parent='', index='end', values=row)
             self.window.mainloop()
 
+      
         #-----Functions for the buttons of tab1------------------------------------------------------------------------------------
+        def see(self):
+            print(self.clicked.get())
+       
+        #refresh
+        def refresh_hours(self):
+            info=self.db.get_all_schedules()
+            for items in self.scheduleTable.get_children():    #empty my table 
+                self.scheduleTable.delete(items)
+            for row in info:
+                self.scheduleTable.insert(parent='', index='end', values=row)
+
+        #add schedule function : manual and upload 
+        def add_schedule(self):
+            popup=tk.Toplevel(self.window)
+            popup.title("Add Schedule")
+            manual=tk.Button(popup, text="Add Manually", command= self.add_manual)
+            manual.pack(pady=10)
+            upload=tk.Button(popup, text="Upload File", command= self.upload_file)
+            upload.pack(pady=10)
+        
+        def add_manual(self):
+            popup=tk.Toplevel(self.window)
+            popup.title("Add Schedule Manually")
+            #Function to submit the information of the entries to the database and close the popup window
+            def submit():
+                new_schedule= Schedule(NameEntry.get(), ClientEntry.get(), int(MonthEntry.get()), 0, "Not Met")
+                self.db.add_schedules(new_schedule)
+                self.refresh_hours()
+                popup.destroy()
+
+            popup.columnconfigure(0, weight=1)
+            popup.columnconfigure(1, weight=1)
+            popup.columnconfigure(2, weight=1)
+            popup.columnconfigure(3, weight=1)
+            popup.rowconfigure(0, weight=1)
+            popup.rowconfigure(1, weight=1)
+            popup.rowconfigure(2, weight=1)
+            popup.rowconfigure(3, weight=1)
+            #Create the labels and entries for the popup window
+            Name= tk.Label(popup , text="RBT Name: " , font=("Arial", 12) )
+            Name.grid(row=0, column=0 , padx=10 , pady=10)
+            Client= tk.Label(popup , text="Client Name: " , font=("Arial", 12) )
+            Client.grid(row=1, column=0 , padx=10 , pady=10)
+            Month= tk.Label(popup , text="Approved hours a month : " , font=("Arial", 12) )
+            Month.grid(row=2, column=0 , padx=10 , pady=10)
+            #Create the entries for the popup window
+            NameEntry= tk.Entry(popup , width=30)
+            NameEntry.grid(row=0, column=1 , padx=10 , pady=10)
+            ClientEntry= tk.Entry(popup , width=30)
+            ClientEntry.grid(row=1, column=1 , padx=10 , pady=10)
+            MonthEntry= tk.Entry(popup , width=30)
+            MonthEntry.grid(row=2, column=1 , padx=10 , pady=10)
+                #Create the submit button for the popup window
+            submit=tk.Button(popup, text = "Submit" , command= submit)
+            submit.grid(row=3, column=0 , columnspan=2 , pady=10)
+
+        def upload_file(self):
+            file_path = filedialog.askopenfilename(title="Select File to upload ", filetypes=[("Text File", ('*.txt')), ("All files", "*.*")])
+            print("Selected File:", file_path)
+
+       
+        #add hours to the db 
+        def add_hours(self):
+            rbt_name= self.clicked.get()
+            if rbt_name == "Select an RBT":
+                return
+            #get new hours 
+            new_hours=self.entry_hours.get()
+            #get the old hours 
+            self.db.cursor.execute('''SELECT hours FROM hours WHERE rbt_name= ? ''', (rbt_name,)) 
+            prev_hours=self.db.cursor.fetchone()
+            #print 
+            total_hours= int(prev_hours[0]) + int(new_hours)
+            #update the hours in the database
+            new_value= Schedule(rbt_name,"" , "" , total_hours, "")
+            self.db.update_schedule(new_value)
+            self.db.update_status(rbt_name)
+            self.refresh_hours()
+
+        #refresh the month 
+        def refresh_month(self):
+            #loop the db , and for each RBT reset hours to zero , then update the status and refresh table 
+            self.db.refresh_month()
+            self.refresh_hours()
+
+        #delete the schedule 
+        def delete_schedule(self):
+            self.db.delete_schedule(self.clicked.get())
+            self.refresh_hours()
+
+        #edit the schedule 
+        def edit_schedule(self):
+            if self.clicked.get() == "Select an RBT":
+                return
+
+            popup=tk.Toplevel(self.window)
+            popup.title("Edit Schedule")
+            
+            def edit():
+               if not new_monthEntry.get().isdigit():
+                   error=tk.Toplevel(popup)
+                   error.title("Error")
+                   error_label=tk.Label(error, text="Please enter a valid number for the hours of the month")
+                   error_label.pack(pady=10)
+                   return
+               
+               new_value= Schedule(self.clicked.get(),"", new_monthEntry.get(),"","")
+               self.db.edit_schedule(new_value)
+               self.db.update_status(self.clicked.get())
+               self.refresh_hours()
+               popup.destroy()
+
+            popup.columnconfigure(0, weight=1)
+            popup.columnconfigure(1, weight=1)
+            popup.rowconfigure(0, weight=1)
+            popup.rowconfigure(1, weight=1)
+            #Create the labels and entries for the popup window
+            new_month= tk.Label(popup , text="Approved hours a month : " , font=("Arial", 12) )
+            new_month.grid(row=0, column=0 , padx=10 , pady=10)
+            #Create the entries for the popup window
+            new_monthEntry= tk.Entry(popup , width=30)
+            new_monthEntry.grid(row=0, column=1 , padx=10 , pady=10)
+            #Create the submit button for the popup window
+            submit=tk.Button(popup, text = "Submit" , command= edit)
+            submit.grid(row=1, column=1 , columnspan=2 , pady=10)
+           
 
 
         #-----Functions for the buttons of tab2------------------------------------------------------------------------------------
@@ -279,7 +485,14 @@ class RBTRecord:
     client_name: str
     start_date: str
     end_date: str
-    
+
+@dataclass
+class Schedule: 
+    rbt_name : str
+    client_name: str
+    month :int 
+    hours: int
+    status :str
 
 #My database Manager For tab2 Class 
 class DatabaseManager :
@@ -295,8 +508,68 @@ class DatabaseManager :
                             client_name TEXT NOT NULL,
                             start_date TEXT NOT NULL,
                             end_date TEXT NOT NULL)''')
+
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS hours 
+                            (rbt_name TEXT NOT NULL,
+                            client_name TEXT NOT NULL, 
+                            month INTEGER NOT NULL ,
+                            hours INTEGER NOT NULL,
+                            status TEXT NOT NULL)''')
         self.connection.commit()
- 
+
+    #---------------------------------------FUNCTIONS FOR THE HOURS TABLE------------------------------------------------------------------------------------
+    #add records to the hours table
+    def add_schedules(self, schedule : Schedule):
+        self.cursor.execute('''INSERT INTO hours (rbt_name, client_name , month , hours , status) 
+                               VALUES (?,?,?,?,?)''', (schedule.rbt_name, schedule.client_name, schedule.month, schedule.hours, schedule.status))
+        self.connection.commit()
+    
+    #get all the schedules
+    def get_all_schedules(self):
+        self.cursor.execute('''SELECT rbt_name, hours, status FROM hours''')
+        return self.cursor.fetchall()
+
+    #delete record 
+    def delete_schedule(self, rbt_name):
+        self.cursor.execute('''DELETE FROM hours WHERE rbt_name= ? ''' ,(rbt_name,))
+        self.connection.commit()
+
+    #update record 
+    def update_schedule(self, new_value: Schedule):       
+        self.cursor.execute('''UPDATE hours SET hours=? WHERE rbt_name = ?''' , 
+                            ( new_value.hours, new_value.rbt_name))
+        self.connection.commit()
+
+    #get RBT names 
+    def get_names(self):
+        self.cursor.execute("SELECT rbt_name FROM hours")
+        return self.cursor.fetchall()
+
+    #get status of a schedule
+    def update_status(self, rbt_name):
+        hours = float(self.cursor.execute('''SELECT hours FROM hours WHERE rbt_name= ? ''' , (rbt_name,)).fetchone()[0])
+        month = self.cursor.execute('''SELECT month FROM hours WHERE rbt_name= ? ''' , (rbt_name,)).fetchone()[0]
+        if hours >= (month*5/100):
+            status = "Met"
+        else:
+                status = "Not Met"
+
+        self.cursor.execute('''UPDATE hours SET status=? WHERE rbt_name= ? ''' , (status , rbt_name))
+
+    #refresh month : reset hours to zero for all the RBTs and update the status
+    def refresh_month(self):
+        self.cursor.execute('''UPDATE hours SET hours=0''')
+        self.cursor.execute('''UPDATE hours SET status="Not Met"''')
+        self.connection.commit()
+
+
+    #edit schedule : fixing info on the schedule of an RBT
+    def edit_schedule(self,new_value:Schedule):
+        self.cursor.execute(''' UPDATE hours SET month=? WHERE rbt_name = ?''' , (new_value.month, new_value.rbt_name))
+        self.connection.commit()
+
+
+    #---------------------------------------FUNCTIONS FOR THE DATABASE MANAGER CLASS------------------------------------------------------------------------------------
     #add records to the database
     def add_record(self, record: RBTRecord):
         self.cursor.execute('''INSERT INTO records (rbt_name, client_name, start_date, end_date) 
@@ -313,7 +586,7 @@ class DatabaseManager :
         self.cursor.execute('''SELECT * FROM records WHERE rbt_name LIKE ?  ''', (rbt_name,))
         return self.cursor.fetchall()
 
-     #delete record 
+    
     
     #delete record by name
     def delete_record(self,rbt_name):
@@ -350,4 +623,13 @@ if __name__ == "__main__":
 #tk.Button( button )
 # frames can be with pack , grid , place
 #close the loop to close your window 
+
+
+
+"""
+1-RBT record , ver activo o viejo , leer pdf y que agarre de ahi la infomacion 
+2-Manager : 
+3- Cliente : avise 2 meses antes de assestment para preparar , 1 mes antes alerta pueda leer el assestment para ver 
+
+"""
 #window.mainloop()
